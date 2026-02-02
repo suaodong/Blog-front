@@ -4,7 +4,6 @@ import type { Article } from '../types';
 
 export const useArticleStore = defineStore('article', () => {
   const articles = ref<Article[]>([]);
-  const currentCategoryArticles = ref<Article[]>([]);
 
   const setArticles = (newArticles: Article[]) => {
     articles.value = newArticles;

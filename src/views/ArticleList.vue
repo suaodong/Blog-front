@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getArticles, getCategoriesAndTags } from '../api/article';
 import { baseURL } from '../utils/request';
@@ -16,6 +16,16 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
 const categoryId = ref<number | null>(null);
+const query = computed(() => (typeof route.query.q === 'string' ? route.query.q.trim().toLowerCase() : ''));
+
+const filteredArticles = computed(() => {
+  const q = query.value;
+  if (!q) return articles.value;
+  return articles.value.filter((a) => {
+    const hay = `${a.title ?? ''} ${a.description ?? ''}`.toLowerCase();
+    return hay.includes(q);
+  });
+});
 
 const getImageUrl = (url: string) => {
   if (!url) return '';
@@ -114,21 +124,23 @@ watch(
     <div class="max-w-7xl mx-auto">
       <!-- Category Header -->
       <div class="mb-12 text-center animate-fade-in-up">
-        <h1 class="text-4xl font-bold text-white mb-4">{{ categoryName }}</h1>
-        <div class="h-1 w-20 bg-brand-primary mx-auto rounded-full"></div>
+        <h1 class="text-4xl sm:text-5xl font-semibold mb-3 tracking-tight" style="font-family: var(--font-display)">
+          {{ categoryName }}
+        </h1>
+        <div class="h-1 w-20 bg-[linear-gradient(90deg,var(--accent),var(--accent-2))] mx-auto rounded-full"></div>
       </div>
 
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center items-center h-64">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-(--accent)"></div>
       </div>
 
       <!-- Article Grid -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <article 
-          v-for="article in articles" 
+          v-for="article in filteredArticles" 
           :key="article.id"
-          class="group relative bg-[#F0F9EB] dark:bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-[#C7EDCC] dark:border-white/10"
+          class="group relative rounded-3xl overflow-hidden transition-all duration-500 border border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_82%,transparent)] shadow-(--shadow) hover:translate-y-[-3px]"
           @click="goToArticle(article.id)"
         >
           <!-- Image Container -->
@@ -138,22 +150,22 @@ watch(
               :alt="article.title"
               class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
             />
-            <div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300"></div>
+            <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.55))] opacity-80 group-hover:opacity-55 transition-opacity duration-300"></div>
           </div>
 
           <!-- Content -->
           <div class="p-6">
-            <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-3 space-x-2">
+            <div class="flex items-center text-xs text-(--muted-2) mb-3 space-x-2">
               <span>{{ formatDate(article.create_time) }}</span>
-              <span class="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
-              <span class="text-brand-primary">Read more</span>
+              <span class="w-1 h-1 bg-[color-mix(in_oklab,var(--muted-2)_70%,transparent)] rounded-full"></span>
+              <span class="text-(--accent)">Read more</span>
             </div>
             
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-brand-primary transition-colors line-clamp-2">
+            <h2 class="text-xl font-semibold mb-3 transition-colors line-clamp-2 group-hover:text-(--accent)" style="font-family: var(--font-display)">
               {{ article.title }}
             </h2>
             
-            <p class="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-4">
+            <p class="text-(--muted) text-sm leading-relaxed line-clamp-3 mb-4">
               {{ article.description }}
             </p>
           </div>
@@ -161,8 +173,9 @@ watch(
       </div>
       
       <!-- Empty State -->
-      <div v-if="!loading && articles.length === 0" class="text-center text-gray-500 dark:text-gray-400 mt-20">
-        <p>此类别中未找到相关文章.</p>
+      <div v-if="!loading && filteredArticles.length === 0" class="text-center text-(--muted) mt-20">
+        <p v-if="query">未找到与 “{{ route.query.q }}” 相关的文章。</p>
+        <p v-else>此类别中未找到相关文章.</p>
       </div>
 
       <!-- Pagination -->
@@ -170,7 +183,7 @@ watch(
         <button 
           @click="handlePageChange(currentPage - 1)" 
           :disabled="currentPage === 1"
-          class="px-4 py-2 bg-[#F0F9EB] dark:bg-[#1a1a1a] text-gray-700 dark:text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-primary hover:text-white dark:hover:bg-brand-primary transition-colors border border-[#C7EDCC] dark:border-white/10"
+          class="px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_82%,transparent)] hover:bg-[color-mix(in_oklab,var(--panel-strong)_92%,transparent)]"
         >
           Previous
         </button>
@@ -181,8 +194,8 @@ watch(
                 :key="page"
                 @click="handlePageChange(page)"
                 :class="[
-                  'w-10 h-10 rounded-md border border-[#C7EDCC] dark:border-white/10 transition-colors',
-                  currentPage === page ? 'bg-brand-primary text-white' : 'bg-[#F0F9EB] dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 hover:bg-brand-primary hover:text-white'
+                  'w-10 h-10 rounded-md border border-(--stroke) transition-colors',
+                  currentPage === page ? 'bg-(--accent) text-white' : 'bg-[color-mix(in_oklab,var(--panel-strong)_82%,transparent)] text-(--muted) hover:bg-(--accent) hover:text-white'
                 ]"
              >
                 {{ page }}
@@ -192,7 +205,7 @@ watch(
         <button 
           @click="handlePageChange(currentPage + 1)" 
           :disabled="currentPage >= Math.ceil(total / pageSize)"
-          class="px-4 py-2 bg-[#F0F9EB] dark:bg-[#1a1a1a] text-gray-700 dark:text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-primary hover:text-white dark:hover:bg-brand-primary transition-colors border border-[#C7EDCC] dark:border-white/10"
+          class="px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_82%,transparent)] hover:bg-[color-mix(in_oklab,var(--panel-strong)_92%,transparent)]"
         >
           Next
         </button>

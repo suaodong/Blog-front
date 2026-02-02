@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getCategoriesAndTags } from '../api/article';
 import type { Category } from '../types';
+
+const route = useRoute();
+const router = useRouter();
 
 const categories = ref<Category[]>([]);
 const isDark = ref(true);
 const searchQuery = ref('');
+const searchOpen = ref(false);
+const mobileOpen = ref(false);
 
 const toggleTheme = () => {
   isDark.value = !isDark.value;
@@ -54,20 +60,47 @@ onMounted(async () => {
   }
 });
 
+const syncSearchFromRoute = () => {
+  const q = route.query.q;
+  searchQuery.value = typeof q === 'string' ? q : '';
+};
+
+const pushSearchToRoute = (q: string) => {
+  const nextQuery: Record<string, any> = { ...route.query };
+  const trimmed = q.trim();
+  if (trimmed) nextQuery.q = trimmed;
+  else delete nextQuery.q;
+  router.replace({ query: nextQuery });
+};
+
+watch(
+  () => route.query.q,
+  () => syncSearchFromRoute(),
+  { immediate: true }
+);
+
+watch(
+  searchQuery,
+  (q) => pushSearchToRoute(q),
+  { flush: 'post' }
+);
+
 const navItems = [
   { name: '首页', href: '/' },
-  { name: '关于我', href: '#' },
+  { name: '关于我', href: '/about' },
 ];
 </script>
 
 <template>
-  <header class="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-[#C7EDCC]/90 dark:bg-black/20 border-b border-[#B3E1BD] dark:border-white/10 transition-all duration-300">
+  <header class="fixed top-0 left-0 w-full z-50 backdrop-blur-md transition-all duration-300 bg-[color-mix(in_oklab,var(--panel-strong)_78%,transparent)] border-b border-(--stroke)">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center h-16">
         <!-- Left: Logo -->
         <div class="flex-1 flex justify-start">
-          <router-link to="/" class="flex-shrink-0 group cursor-pointer">
-            <span class="text-gray-900 dark:text-white text-xl font-bold tracking-wider group-hover:text-brand-primary transition-colors">ANTIGRAVITY</span>
+          <router-link to="/" class="shrink-0 group cursor-pointer">
+            <span class="text-xl font-semibold tracking-[0.18em] uppercase transition-colors group-hover:text-(--accent)" style="font-family: var(--font-display)">
+              ANTIGRAVITY
+            </span>
           </router-link>
         </div>
 
@@ -77,15 +110,15 @@ const navItems = [
               v-for="item in navItems"
               :key="item.name"
               :to="item.href"
-              class="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-[#B3E1BD] dark:hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300"
-              active-class="bg-[#B3E1BD] dark:bg-white/10 text-gray-900 dark:text-white"
+              class="px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 text-(--muted) hover:text-(--text) hover:bg-[color-mix(in_oklab,var(--panel)_75%,transparent)]"
+              active-class="bg-[color-mix(in_oklab,var(--panel)_85%,transparent)] text-[var(--text)]"
             >
               {{ item.name }}
             </router-link>
 
             <!-- Category Dropdown -->
             <div class="relative group inline-block text-left">
-              <button class="inline-flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-[#B3E1BD] dark:hover:bg-white/10 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 focus:outline-none">
+              <button class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 focus:outline-none text-(--muted) hover:text-(--text) hover:bg-[color-mix(in_oklab,var(--panel)_75%,transparent)]">
                 <span>分类</span>
                 <svg class="w-4 h-4 ml-1 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -93,13 +126,13 @@ const navItems = [
               </button>
               
               <!-- Dropdown Menu -->
-              <div class="absolute right-0 mt-0 w-48 origin-top-right rounded-md bg-[#C7EDCC] dark:bg-[#1a1a1a] shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-50 border border-[#B3E1BD] dark:border-white/10">
+              <div class="absolute right-0 mt-0 w-52 origin-top-right rounded-xl shadow-lg focus:outline-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-50 border border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_90%,transparent)] backdrop-blur-md">
                 <div class="py-1">
                   <router-link
                     v-for="category in categories"
                     :key="category.id"
                     :to="category.href"
-                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-[#B3E1BD] dark:hover:bg-brand-primary hover:text-gray-900 dark:hover:text-white transition-colors"
+                    class="block px-4 py-2 text-sm transition-colors text-(--muted) hover:text-(--text) hover:bg-[color-mix(in_oklab,var(--panel)_85%,transparent)]"
                   >
                     {{ category.name }}
                   </router-link>
@@ -110,16 +143,43 @@ const navItems = [
 
         <!-- Right: Icons -->
         <div class="flex-1 flex justify-end items-center space-x-4">
+           <!-- Mobile menu button -->
+           <button
+             type="button"
+             class="md:hidden inline-flex items-center justify-center rounded-full w-10 h-10 border border-(--stroke) bg-[color-mix(in_oklab,var(--panel)_82%,transparent)] text-(--muted) hover:text-(--text) hover:bg-[color-mix(in_oklab,var(--panel)_92%,transparent)] transition-colors"
+             @click="mobileOpen = !mobileOpen"
+             :aria-expanded="mobileOpen"
+             aria-label="Toggle navigation"
+           >
+             <svg v-if="!mobileOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+             </svg>
+             <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+             </svg>
+           </button>
+
            <!-- Search with Expandable Input -->
-           <div class="flex items-center group relative">
-             <div class="flex items-center justify-center bg-[#B3E1BD] dark:bg-white/10 rounded-full transition-all duration-300 w-10 group-hover:w-48 overflow-hidden">
+           <div class="flex items-center relative">
+             <div
+               class="flex items-center justify-center rounded-full transition-all duration-300 overflow-hidden border border-(--stroke) bg-[color-mix(in_oklab,var(--panel)_82%,transparent)]"
+               :class="searchOpen ? 'w-56' : 'w-10'"
+             >
                <input 
                  v-model="searchQuery"
                  type="text" 
                  placeholder="Search..." 
-                 class="w-0 group-hover:w-full bg-transparent border-none text-sm text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:outline-none px-0 group-hover:px-2 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                 class="bg-transparent border-none text-sm text-(--text) placeholder-(--muted-2) focus:outline-none transition-all duration-300"
+                 :class="searchOpen ? 'w-full px-3 opacity-100' : 'w-0 px-0 opacity-0'"
+                 @focus="searchOpen = true"
+                 @keydown.esc="searchOpen = false"
                />
-               <button class="p-2 rounded-full text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors z-10 flex-shrink-0">
+               <button
+                 class="p-2 rounded-full transition-colors z-10 shrink-0 text-(--muted-2) hover:text-(--text)"
+                 type="button"
+                 @click="searchOpen = !searchOpen"
+                 aria-label="Toggle search"
+               >
                  <span class="sr-only">Search</span>
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -131,12 +191,12 @@ const navItems = [
            <!-- Theme Switcher -->
            <button 
              @click="toggleTheme" 
-             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-[#C7EDCC] dark:focus:ring-offset-gray-900"
-             :class="isDark ? 'bg-brand-primary' : 'bg-[#B3E1BD]'"
+             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-(--accent) focus:ring-offset-2 focus:ring-offset-(--app-bg) border border-(--stroke)"
+             :class="isDark ? 'bg-[color-mix(in_oklab,var(--accent)_75%,transparent)]' : 'bg-[color-mix(in_oklab,var(--panel)_92%,transparent)]'"
            >
              <span class="sr-only">Toggle theme</span>
              <span 
-               class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out flex items-center justify-center"
+              class="flex h-4 w-4 transform items-center justify-center rounded-full bg-white transition-transform duration-200 ease-in-out"
                :class="isDark ? 'translate-x-6' : 'translate-x-1'"
              >
                <!-- Optional: Sun/Moon icons inside the knob -->
@@ -151,5 +211,38 @@ const navItems = [
         </div>
       </div>
     </div>
+
+    <!-- Mobile panel -->
+    <transition name="fade">
+      <div v-show="mobileOpen" class="md:hidden border-t border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_92%,transparent)] backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 space-y-2">
+          <router-link
+            v-for="item in navItems"
+            :key="item.name"
+            :to="item.href"
+            class="flex items-center justify-between rounded-xl px-4 py-3 border border-(--stroke) bg-[color-mix(in_oklab,var(--panel)_78%,transparent)] text-(--text) transition-colors hover:bg-[color-mix(in_oklab,var(--panel)_92%,transparent)]"
+            @click="mobileOpen = false"
+          >
+            <span class="text-sm font-semibold">{{ item.name }}</span>
+            <span class="text-(--muted-2)">→</span>
+          </router-link>
+
+          <div class="pt-2">
+            <div class="px-1 text-xs tracking-[0.22em] uppercase text-(--muted-2)">分类</div>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <router-link
+                v-for="category in categories"
+                :key="category.id"
+                :to="category.href"
+                class="rounded-xl px-3 py-2 border border-(--stroke) bg-[color-mix(in_oklab,var(--panel)_78%,transparent)] text-sm text-(--text) hover:bg-[color-mix(in_oklab,var(--panel)_92%,transparent)] transition-colors"
+                @click="mobileOpen = false"
+              >
+                {{ category.name }}
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </header>
 </template>

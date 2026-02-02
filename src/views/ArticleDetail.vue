@@ -15,6 +15,8 @@ const articleStore = useArticleStore();
 const article = ref<Article | null>(null);
 const loading = ref(true);
 const showBackToTop = ref(false);
+const mdTheme = ref<'dark' | 'light'>('dark');
+let themeObserver: MutationObserver | null = null;
 
 const getImageUrl = (url: string) => {
   if (!url) return '';
@@ -58,6 +60,13 @@ const scrollToTop = () => {
 };
 
 onMounted(() => {
+  const syncTheme = () => {
+    mdTheme.value = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  };
+  syncTheme();
+  themeObserver = new MutationObserver(syncTheme);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
   window.addEventListener('scroll', handleScroll);
   if (route.params.id) {
     fetchArticle(Number(route.params.id));
@@ -66,6 +75,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  themeObserver?.disconnect();
+  themeObserver = null;
 });
 
 watch(
@@ -88,7 +99,7 @@ const formatDate = (dateString: string) => {
 
 <template>
   <div v-if="loading && !article" class="flex justify-center items-center min-h-screen pt-16">
-    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-primary"></div>
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-(--accent)"></div>
   </div>
   <div v-else-if="article" class="relative min-h-screen pt-16">
     <!-- Hero Section with Parallax Effect -->
@@ -97,17 +108,17 @@ const formatDate = (dateString: string) => {
         class="absolute inset-0 bg-cover bg-center transform scale-105"
         :style="{ backgroundImage: `url(${getImageUrl(article.cover)})` }"
       >
-        <div class="absolute inset-0 bg-gradient-to-b from-brand-dark/30 via-brand-dark/60 to-brand-dark"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.65))]"></div>
       </div>
       
       <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
-        <span class="px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-brand-primary uppercase border border-brand-primary/30 rounded-full bg-brand-primary/10 backdrop-blur-sm">
+        <span class="px-3 py-1 mb-4 text-xs font-semibold tracking-[0.22em] uppercase border border-white/20 rounded-full bg-black/20 backdrop-blur-sm text-white">
           技术杂烩
         </span>
-        <h1 class="text-4xl md:text-6xl font-bold text-white mb-4 max-w-4xl leading-tight">
+        <h1 class="text-4xl md:text-6xl font-semibold text-white mb-4 max-w-4xl leading-tight" style="font-family: var(--font-display)">
           {{ article.title }}
         </h1>
-        <div class="flex items-center space-x-4 text-gray-400 text-sm">
+        <div class="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 text-white/75 text-sm">
           <span>{{ formatDate(article.create_time) }}</span>
           <span>•</span>
           <span>{{ article.description }}</span>
@@ -117,22 +128,22 @@ const formatDate = (dateString: string) => {
 
     <!-- Content Section -->
     <article class="relative z-20 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
-      <div class="bg-[#1a1a1a]/80 backdrop-blur-md rounded-2xl p-8 md:p-12 shadow-2xl border border-white/5 ring-1 ring-white/10">
+      <div class="rounded-3xl p-7 md:p-11 shadow-(--shadow) border border-(--stroke) bg-[color-mix(in_oklab,var(--panel-strong)_86%,transparent)] backdrop-blur-md">
         <MdPreview 
           editorId="preview-only" 
           :modelValue="article.content" 
-          theme="dark" 
-          class="!bg-transparent"
+          :theme="mdTheme"
+          class="bg-transparent!"
         />
         
         <!-- Footer Meta -->
-        <div class="mt-12 pt-8 border-t border-white/10 flex justify-between items-center text-gray-500 text-sm">
+        <div class="mt-12 pt-8 border-t border-(--stroke) flex justify-between items-center text-(--muted-2) text-sm">
            <div>
              Last updated: {{ formatDate(article.update_time) }}
            </div>
            <div class="flex space-x-2">
              <!-- Share buttons placeholders -->
-             <button class="hover:text-white transition-colors">Share</button>
+             <button class="hover:text-(--text) transition-colors">Share</button>
            </div>
         </div>
       </div>
